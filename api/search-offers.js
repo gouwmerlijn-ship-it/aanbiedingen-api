@@ -3,45 +3,85 @@
  * Compatibel met Google Assistant / Dialogflow Fulfillment
  */
 
-// GraphQL query template voor het zoeken van aanbiedingen
+// GraphQL query template voor het zoeken van aanbiedingen (allefolders.nl schema)
 const SEARCH_OFFERS_QUERY = `
-  query SearchOffers($searchTerm: String!) {
-    searchOffers(searchTerm: $searchTerm) {
-      id
-      productName
-      price
-      originalPrice
-      discount
-      discountPercentage
-      store {
-        id
-        name
-        address
-        city
+  query SearchResult($searchResults: SearchResultsInput!, $pagination: PaginationInput!) {
+    searchResults(searchResults: $searchResults, pagination: $pagination) {
+      __typename
+      ... on SearchOfferList {
+        offers {
+          id
+          name
+          description
+          discountPercent
+          priceAfterDiscount
+          priceBeforeDiscount
+          brochureId
+          pageIndex
+          shop {
+            id
+            fileUrl(version: SMALL)
+            slug
+            name
+            __typename
+          }
+          hotspot {
+            id
+            ... on HotspotProductEntity {
+              fileUrl(version: SMALL)
+              __typename
+            }
+            __typename
+          }
+          __typename
+        }
+        searchMethod
+        __typename
       }
-      imageUrl
-      validUntil
-      description
+      ... on SearchNoResults {
+        status
+        __typename
+      }
     }
   }
 `;
 
 /**
- * Haalt aanbiedingen op via GraphQL
+ * Haalt aanbiedingen op via GraphQL (allefolders.nl)
  */
-async function fetchOffersFromGraphQL(searchTerm, graphqlEndpoint, apiKey) {
+async function fetchOffersFromGraphQL(searchTerm, graphqlEndpoint, apiKey, contextHeader) {
   try {
+    const headers = {
+      'Content-Type': 'application/json',
+      'Accept': 'application/graphql-response+json, application/graphql+json, application/json',
+      'Origin': 'https://www.allefolders.nl'
+    };
+
+    // Voeg jafolders-context header toe als beschikbaar
+    if (contextHeader) {
+      headers['jafolders-context'] = contextHeader;
+    }
+
+    // Voeg Authorization header toe als API key beschikbaar is
+    if (apiKey) {
+      headers['Authorization'] = `Bearer ${apiKey}`;
+    }
+
     const response = await fetch(graphqlEndpoint, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': apiKey ? `Bearer ${apiKey}` : '',
-        ...(apiKey ? {} : {})
-      },
+      headers: headers,
       body: JSON.stringify({
+        operationName: 'SearchResult',
         query: SEARCH_OFFERS_QUERY,
         variables: {
-          searchTerm: searchTerm
+          searchResults: {
+            query: searchTerm,
+            searchMethod: 'EXACT_OFFER_CATEGORY_NAME'
+          },
+          pagination: {
+            limit: 20,
+            offset: 0
+          }
         }
       })
     });
@@ -56,7 +96,15 @@ async function fetchOffersFromGraphQL(searchTerm, graphqlEndpoint, apiKey) {
       throw new Error(`GraphQL errors: ${JSON.stringify(data.errors)}`);
     }
 
-    return data.data?.searchOffers || [];
+    // Extract offers uit SearchOfferList
+    const searchResults = data.data?.searchResults;
+    if (searchResults?.__typename === 'SearchOfferList') {
+      return searchResults.offers || [];
+    } else if (searchResults?.__typename === 'SearchNoResults') {
+      return [];
+    }
+
+    return [];
   } catch (error) {
     console.error('GraphQL fetch error:', error);
     throw error;
@@ -75,13 +123,18 @@ function formatOffersForAssistant(offers, searchTerm) {
   }
 
   const offerTexts = offers.map((offer, index) => {
-    const discountText = offer.discountPercentage 
-      ? `${offer.discountPercentage}% korting`
-      : offer.discount 
-      ? `€${offer.discount.toFixed(2)} korting`
-      : '';
+    const productName = offer.name || 'Onbekend product';
+    const price = offer.priceAfterDiscount || 0;
+    const originalPrice = offer.priceBeforeDiscount;
+    const discountPercent = offer.discountPercent || 0;
+    const shopName = offer.shop?.name || 'Onbekende winkel';
+    const description = offer.description || '';
 
-    return `${index + 1}. ${offer.productName} - €${offer.price.toFixed(2)}${offer.originalPrice ? ` (was €${offer.originalPrice.toFixed(2)})` : ''}${discountText ? ` - ${discountText}` : ''}${offer.store ? ` bij ${offer.store.name}` : ''}${offer.validUntil ? ` - geldig tot ${offer.validUntil}` : ''}`;
+    const discountText = discountPercent > 0 ? `${discountPercent}% korting` : '';
+    const priceText = price > 0 ? `€${price.toFixed(2)}` : '';
+    const originalPriceText = originalPrice && originalPrice > price ? ` (was €${originalPrice.toFixed(2)})` : '';
+
+    return `${index + 1}. ${productName}${priceText ? ` - ${priceText}` : ''}${originalPriceText}${discountText ? ` - ${discountText}` : ''}${shopName ? ` bij ${shopName}` : ''}${description ? ` - ${description}` : ''}`;
   }).join('\n');
 
   const fulfillmentText = offers.length === 1
@@ -92,19 +145,23 @@ function formatOffersForAssistant(offers, searchTerm) {
     fulfillmentText,
     offers: offers.map(offer => ({
       id: offer.id,
-      productName: offer.productName,
-      price: offer.price,
-      originalPrice: offer.originalPrice,
-      discount: offer.discount,
-      discountPercentage: offer.discountPercentage,
-      store: offer.store ? {
-        name: offer.store.name,
-        address: offer.store.address,
-        city: offer.store.city
+      productName: offer.name,
+      price: offer.priceAfterDiscount,
+      originalPrice: offer.priceBeforeDiscount,
+      discount: offer.priceBeforeDiscount && offer.priceAfterDiscount 
+        ? offer.priceBeforeDiscount - offer.priceAfterDiscount 
+        : null,
+      discountPercentage: offer.discountPercent,
+      store: offer.shop ? {
+        id: offer.shop.id,
+        name: offer.shop.name,
+        slug: offer.shop.slug,
+        logoUrl: offer.shop.fileUrl
       } : null,
-      imageUrl: offer.imageUrl,
-      validUntil: offer.validUntil,
-      description: offer.description
+      imageUrl: offer.hotspot?.fileUrl || null,
+      description: offer.description,
+      brochureId: offer.brochureId,
+      pageIndex: offer.pageIndex
     }))
   };
 }
@@ -145,22 +202,16 @@ export default async function handler(req, res) {
     }
 
     // Haal environment variables op
-    const graphqlEndpoint = process.env.GRAPHQL_ENDPOINT;
+    const graphqlEndpoint = process.env.GRAPHQL_ENDPOINT || 'https://api.jafolders.com/graphql';
     const graphqlApiKey = process.env.GRAPHQL_API_KEY;
-
-    if (!graphqlEndpoint) {
-      console.error('GRAPHQL_ENDPOINT environment variable is not set');
-      return res.status(500).json({
-        error: 'Server configuration error',
-        fulfillmentText: 'Er is een configuratiefout opgetreden. Neem contact op met de beheerder.'
-      });
-    }
+    const jafoldersContext = process.env.JAFOLDERS_CONTEXT || 'allefolders;nl;web;1;1';
 
     // Haal aanbiedingen op via GraphQL
     const offers = await fetchOffersFromGraphQL(
       searchTerm.trim(),
       graphqlEndpoint,
-      graphqlApiKey
+      graphqlApiKey,
+      jafoldersContext
     );
 
     // Formatteer response voor Google Assistant

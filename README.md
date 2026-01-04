@@ -20,6 +20,10 @@ Een serverless GraphQL API voor het zoeken van aanbiedingen, volledig geoptimali
 
 ## 🛠️ Setup & Deployment
 
+📖 **📚 Uitgebreide stap-voor-stap gids**: Zie [`DEPLOYMENT_GUIDE.md`](DEPLOYMENT_GUIDE.md) voor een complete, gedetailleerde deployment instructie met screenshots en troubleshooting.
+
+### Quick Start
+
 ### Stap 1: Project naar GitHub pushen
 
 1. Maak een nieuwe repository aan op GitHub
@@ -44,36 +48,105 @@ git push -u origin main
 
 ### Stap 3: Environment Variables instellen
 
-In je Vercel project dashboard:
+**⚠️ Belangrijk**: Environment variables kunnen **voor of na** de eerste deployment worden toegevoegd, maar na het toevoegen/wijzigen moet je altijd een nieuwe deployment triggeren!
 
-1. Ga naar **Settings** → **Environment Variables**
-2. Voeg de volgende variabelen toe:
+#### Optie A: Voor de eerste deployment (aanbevolen)
 
-#### Verplicht:
-- **`GRAPHQL_ENDPOINT`**: De URL van je GraphQL endpoint
-  - Voorbeeld: `https://api.example.com/graphql`
+1. Na het importeren van je repository, **voordat je op "Deploy" klikt**:
+   - Klik op **"Environment Variables"** (rechtsboven of in de sidebar)
+   - Voeg de variabelen toe (zie hieronder)
+   - Klik daarna op **"Deploy"**
 
-#### Optioneel:
-- **`GRAPHQL_API_KEY`**: API key voor authenticatie (indien vereist)
-  - Voorbeeld: `Bearer abc123xyz...`
+#### Optie B: Na de eerste deployment
+
+1. Na de eerste deployment:
+   - Ga naar je project dashboard
+   - Klik op **Settings** → **Environment Variables**
+   - Voeg de variabelen toe
+   - **Trigger een nieuwe deployment** (zie hieronder)
 
 #### Environment Variables toevoegen:
 
-1. Klik op "Add New"
+1. Klik op **"Add New"**
 2. Voer de **Name** in (bijv. `GRAPHQL_ENDPOINT`)
-3. Voer de **Value** in (je GraphQL endpoint URL)
+3. Voer de **Value** in (je GraphQL endpoint URL of API key)
 4. Selecteer de **Environments** waar dit van toepassing is:
    - ✅ Production
-   - ✅ Preview
+   - ✅ Preview  
    - ✅ Development
-5. Klik op "Save"
+5. Klik op **"Save"**
 
-**Belangrijk**: Na het toevoegen van environment variables moet je een nieuwe deployment triggeren:
+#### Verplichte variabele:
+- **`GRAPHQL_ENDPOINT`**: De URL van je GraphQL endpoint
+  - Voor allefolders.nl: `https://api.jafolders.com/graphql` (dit is de standaard)
+  - Of je eigen endpoint: `https://api.example.com/graphql`
+
+#### Optionele variabelen:
+- **`GRAPHQL_API_KEY`**: API key voor authenticatie (indien vereist)
+  - Voorbeeld: `abc123xyz...` (zonder "Bearer" prefix, dit wordt automatisch toegevoegd)
+- **`JAFOLDERS_CONTEXT`**: Context header voor allefolders.nl API (optioneel)
+  - Standaard: `allefolders;nl;web;1;1`
+  - Pas dit aan als je een andere context nodig hebt
+
+### Waar vind ik deze waarden?
+
+**Deze waarden moet je zelf hebben of verkrijgen van je GraphQL service provider.** Hier zijn de meest voorkomende scenario's:
+
+#### Scenario 1: Je hebt al een GraphQL API
+- **GRAPHQL_ENDPOINT**: Dit is de URL waar je GraphQL API draait
+  - Bijvoorbeeld: `https://api.jouwbedrijf.nl/graphql` of `https://graphql.example.com`
+  - Vraag je backend developer of check je API documentatie
+- **GRAPHQL_API_KEY**: Alleen nodig als je API authenticatie vereist
+  - Check je API documentatie of vraag je beheerder
+  - Vaak te vinden in je account dashboard van de service provider
+
+#### Scenario 2: Je gebruikt een externe service (bijv. commercieel aanbod platform)
+- Check de documentatie van de service
+- Vaak te vinden in:
+  - Developer dashboard / API settings
+  - Account settings → API keys
+  - Service documentatie → "Getting Started" of "API Integration"
+
+#### Scenario 3: Je moet nog een GraphQL endpoint opzetten
+Als je nog geen GraphQL endpoint hebt, heb je een paar opties:
+
+**Optie A: Gebruik een bestaande GraphQL service**
+- Zoek naar commerciële aanbiedingen APIs die GraphQL ondersteunen
+- Of gebruik een service zoals Hasura, Apollo Server, etc.
+
+**Optie B: Maak een mock/test endpoint (voor testen)**
+- Je kunt tijdelijk een mock GraphQL endpoint gebruiken om de API te testen
+- Zie hieronder voor een voorbeeld mock endpoint
+
+**Optie C: Bouw je eigen GraphQL API**
+- Gebruik bijvoorbeeld:
+  - **Hasura** (snel GraphQL over je database)
+  - **Apollo Server** (Node.js GraphQL server)
+  - **Supabase** (heeft GraphQL support)
+  - **AWS AppSync** (managed GraphQL service)
+
+#### Voor testen: Mock GraphQL Endpoint
+
+Als je de API wilt testen zonder een echte GraphQL endpoint, kun je tijdelijk een mock service gebruiken zoals:
+
+- **GraphQL Playground** met mock data
+- **Mock Service Worker** voor lokale ontwikkeling
+- **Online mock services** zoals `https://graphqlzero.almansi.me/api`
+
+**Let op**: Voor productie gebruik moet je een echte GraphQL endpoint hebben die aanbiedingen data levert.
+
+📖 **Uitgebreide uitleg**: Zie `GRAPHQL_SETUP.md` voor een complete gids over het vinden of opzetten van een GraphQL endpoint.
+
+#### Nieuwe deployment triggeren (na toevoegen/wijzigen):
+
+**Methode 1: Via Vercel Dashboard**
 - Ga naar **Deployments** tab
 - Klik op de drie puntjes (⋯) bij de laatste deployment
-- Selecteer "Redeploy"
+- Selecteer **"Redeploy"**
 
-Of push een nieuwe commit naar GitHub om automatisch te deployen.
+**Methode 2: Via GitHub**
+- Push een nieuwe commit naar GitHub (bijv. een kleine wijziging in README)
+- Vercel deployt automatisch met de nieuwe environment variables
 
 ## 📡 API Endpoints
 
