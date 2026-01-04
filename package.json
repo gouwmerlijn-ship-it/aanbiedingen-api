@@ -1,0 +1,26 @@
+{
+  "name": "aanbiedingen-api",
+  "version": "1.0.0",
+  "description": "GraphQL API voor aanbiedingen zoeken - Google Assistant Fulfillment",
+  "main": "index.js",
+  "scripts": {
+    "dev": "vercel dev",
+    "build": "echo 'No build step required'"
+  },
+  "keywords": [
+    "graphql",
+    "api",
+    "vercel",
+    "serverless",
+    "google-assistant"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@vercel/node": "^3.0.0"
+  },
+  "engines": {
+    "node": "18.x"
+  }
+}
+

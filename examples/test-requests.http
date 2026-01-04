@@ -1,0 +1,42 @@
+### Voorbeelden van API requests
+### Deze bestand kan worden gebruikt met REST Client extensie in VS Code
+### Of kopieer de requests naar Postman
+
+@baseUrl = https://jouw-project.vercel.app/api
+
+### GET Request - Zoek naar "cola"
+GET {{baseUrl}}/search-offers?searchTerm=cola
+
+### GET Request - Zoek naar "melk" (alternatieve parameter naam)
+GET {{baseUrl}}/search-offers?q=melk
+
+### POST Request - Zoek naar "brood"
+POST {{baseUrl}}/search-offers
+Content-Type: application/json
+
+{
+  "searchTerm": "brood"
+}
+
+### POST Request - Google Assistant / Dialogflow format
+POST {{baseUrl}}/search-offers
+Content-Type: application/json
+
+{
+  "queryResult": {
+    "parameters": {
+      "searchTerm": "cola"
+    }
+  }
+}
+
+### POST Request - Alternatief format
+POST {{baseUrl}}/search-offers
+Content-Type: application/json
+
+{
+  "query": {
+    "searchTerm": "melk"
+  }
+}
+
