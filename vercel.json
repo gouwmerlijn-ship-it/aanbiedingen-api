@@ -3,10 +3,7 @@
   "builds": [
     {
       "src": "api/**/*.js",
-      "use": "@vercel/node",
-      "config": {
-        "runtime": "nodejs24.x"
-      }
+      "use": "@vercel/node"
     }
   ],
   "routes": [
